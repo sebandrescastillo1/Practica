@@ -27,7 +27,7 @@ then
 elif test $device -eq 1
 then
     echo "option 1: webcam";
-    device="/dev/video1";
+    device="/dev/video0";
     ffmpeg -f v4l2 -v 32 -xerror -framerate 25 -video_size 640x480 -i $device \
     -c:v mpeg2video -pix_fmt yuv420p -s 720x480 -aspect 16:9 -streamid 0:180 \
     -b:v 2298k -maxrate 2298k -minrate 2298k -bufsize 2298k \

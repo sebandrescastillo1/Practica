@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
   //addr playout info
   addr_PLAYOUT.sin_family = AF_INET;
   addr_PLAYOUT.sin_port = htons(PORTNUMBER_PLAYOUT);
-  addr_PLAYOUT.sin_addr.s_addr = inet_addr("10.2.50.11"); //ip playout:10.2.50.11
+  addr_PLAYOUT.sin_addr.s_addr = inet_addr("10.2.51.11"); //ip playout:10.2.50.11
 
 
   
