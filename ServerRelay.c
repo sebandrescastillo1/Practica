@@ -21,8 +21,12 @@
 #define PORTNUMBER  47203   //Puerto escucha/envia ordenes TCP Clientes Webcam
                             //y ademas puerto para recibir video UDP
 
-#define PORTNUMBER2 47204   //Puerto escucha/envia ordenes TCP Cliente Playout 
-                            //y ademas puerto de reenvio video UDP
+#define PORTNUMBER2 47204   //Puerto UDP de reenvio de video de SERVER a CLIENTE PLAYOUT y además por el que recibe 
+                            //clientesWebcam por TCP
+
+#define PORT_47200 47200
+#define PORT_47201 47201
+
 
 #define MAXLINE 64000       //MaX Size packet UDP       
 
@@ -31,6 +35,7 @@
 struct clientStruct{    /*contain fd(if -1 not connected) and name of a client*/
     int fd;
     char name[50];
+    int port;
     struct sockaddr_in addr;
 };
 struct Redirect{
@@ -41,6 +46,7 @@ struct Redirect{
 
 /*Ordenes por TCP*/
 int Clients_TCP_handler(int sfd);
+int conmutador=47204;
 void Start_stream(int sfd);
 void Stop_stream(int sfd);
 void Bye_strem(int sfd);
@@ -82,6 +88,7 @@ int main(int argc, char *argv[])
     }
 
 	int option = TRUE;
+    char* ACK_msg = "ACK";
     int master_socket, n;
     socklen_t addrlen;
     struct sockaddr_in from;
@@ -102,6 +109,8 @@ int main(int argc, char *argv[])
 
     //Encargado TCP playout
     pthread_create(&Hilo_TCP, NULL, TCP_path, NULL);
+
+
 
     //Creamos socket master
     if ((master_socket = socket(AF_INET, SOCK_STREAM, 0)) == 0)
@@ -131,7 +140,7 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    printf("Escuchando en puerto: %d\n", PORTNUMBER);
+    printf("-_Recibiendo registro de Webcams por puerto: %d\n", PORTNUMBER);
 
     if (listen(master_socket, 3) < 0)
     {
@@ -141,7 +150,7 @@ int main(int argc, char *argv[])
 
     //Esperando conexiones
     addrlen = sizeof(address);
-    printf("Esperando conexiones\n");
+    printf("-_Esperando conexiones con Webcams\n");
 
     //Remueve los elementos del conjunto
     FD_ZERO(&readfds_Copy);
@@ -157,7 +166,7 @@ int main(int argc, char *argv[])
 
         if (FD_ISSET(master_socket, &readfds)) //Cuando se trata de master_socket
         {
-            printf("Aceptando una nueva conexion...\n");
+            printf("-_Aceptando nueva conexion Webcam...\n");
             
             pthread_mutex_lock(&lock);
 
@@ -170,7 +179,18 @@ int main(int argc, char *argv[])
                 n = recv(newSocket, msg, sizeof(msg), 0);    //get webcam name
                 msg[n]='\0';
                 strcpy( lista_clientes[newPosition].name, msg);
-                printf("New webCam Client name: %s\n", lista_clientes[newPosition].name);
+                printf("-_Nombre nuevo cliente Webcam: %s\n", lista_clientes[newPosition].name);
+                
+                
+                if ((send(newSocket, (char *)ACK_msg, strlen(ACK_msg),0)) < 0)  
+                {
+                      perror("Send ACK\n");
+                }
+                
+                n = recv(newSocket, msg, sizeof(msg),0);
+                msg[n]='\0';
+                lista_clientes[newPosition].port=atoi(msg);
+                //printf("-_Puerto por el que envia video Webcam: %d", lista_clientes[newPosition].port);
                 memcpy(&(lista_clientes[newPosition].addr), &from, sizeof(from));
 
             } else{
@@ -220,7 +240,7 @@ int get_free_listClient(struct clientStruct *list){
 }
 
 void* UDP_path(void *param){   //Recibe video UDP por PORTNUMBER y reenvia a PORTNUMBER2, su funcion es hacer lo que hacia el codigo en su version 1
-    printf("START UDP PATH\n");
+    printf("Hilo UDP activado\n");
     int sock_src, sock_dst, n;
     char buffer[MAXLINE];
     socklen_t lenDST, lenSRC, len;
@@ -240,8 +260,36 @@ void* UDP_path(void *param){   //Recibe video UDP por PORTNUMBER y reenvia a POR
 
     sock_src = socket(AF_INET, SOCK_DGRAM, 0);
     sock_dst = socket(AF_INET, SOCK_DGRAM, 0);
-    pthread_cleanup_push(close, sock_dst);  //"rutina de salida"
-    pthread_cleanup_push(close, sock_src);     
+
+    int sock_47200, sock_47201;
+    struct sockaddr_in addr_47200, addr_47201;
+    socklen_t len_47200, len_47201;
+    len_47200 = sizeof(addr_47200);
+    len_47201 = sizeof(addr_47201);
+
+    addr_47200.sin_family=AF_INET;
+    addr_47200.sin_port=htons(PORT_47200);
+    addr_47200.sin_addr.s_addr =htonl(INADDR_ANY);
+
+    addr_47201.sin_family=AF_INET;
+    addr_47201.sin_port=htons(PORT_47201);
+    addr_47201.sin_addr.s_addr =htonl(INADDR_ANY);
+
+    sock_47200 = socket(AF_INET, SOCK_DGRAM, 0);
+    sock_47201 = socket(AF_INET, SOCK_DGRAM, 0);
+
+    if (bind(sock_47200, (struct sockaddr *) &addr_47200, len_47200)<0)
+    {
+        perror("UDP socket error");
+    }
+
+    if (bind(sock_47201, (struct sockaddr *) &addr_47201, len_47201)<0)
+    {
+        perror("UDP socket error");
+    }
+    
+    //pthread_cleanup_push(close, sock_dst);  //"rutina de salida"
+    //pthread_cleanup_push(close, sock_src);     
     
     if (bind(sock_src, (struct sockaddr *) &address, len) < 0 )
         perror("UDP socket error");
@@ -249,21 +297,44 @@ void* UDP_path(void *param){   //Recibe video UDP por PORTNUMBER y reenvia a POR
     if (bind(sock_dst, (struct sockaddr *) &serv_addr_2, len_2) < 0 )
         perror("UDP socket error");
     
-	printf("UDP Server INET ADDRESS: %s:%d\n", inet_ntoa(address.sin_addr), ntohs(address.sin_port));
     
-	printf("UDP src client INET ADDRESS: %s:%d\n", inet_ntoa(UDPaddr.src.sin_addr), ntohs(UDPaddr.src.sin_port));
     
-	printf("UDP dst client ADDRESS: %s:%d\n", inet_ntoa(UDPaddr.dst.sin_addr), ntohs(UDPaddr.dst.sin_port));
     char buffer_2[128];
     int count;
     int k=0;
-    while( (n=recvfrom(sock_src, (char *)buffer, MAXLINE, 0, (struct sockaddr *) &(UDPaddr.src), &lenSRC))  > 0){ 
-        
-        buffer[n]='\0'; //for printf
-        k=recvfrom(sock_dst, (char *)buffer_2, 128, 0, (struct sockaddr *)&(UDPaddr.dst), &lenDST); //recv "ping" to know addr
-
-        if(sendto(sock_dst, buffer, n, 0, (struct sockaddr *) &(UDPaddr.dst), lenDST) < 0)
+    while(1){ 
+        if (conmutador==47200)
+        {   
+            
+            n=recvfrom(sock_47200, (char *)buffer, MAXLINE, 0, (struct sockaddr *) &(addr_47200), &len_47200);
+            buffer[n]='\0'; //for printf
+            k=recvfrom(sock_dst, (char *)buffer_2, 128, 0, (struct sockaddr *)&(UDPaddr.dst), &lenDST); //recv "ping" to know addr
+            if(sendto(sock_dst, buffer, n, 0, (struct sockaddr *) &(UDPaddr.dst), lenDST) < 0)
             break;
+            
+        }
+        
+        if (conmutador==47201){
+           
+            n=recvfrom(sock_47201, (char *)buffer, MAXLINE, 0, (struct sockaddr *) &(addr_47201), &len_47201);
+            buffer[n]='\0'; //for printf
+            k=recvfrom(sock_dst, (char *)buffer_2, 128, 0, (struct sockaddr *)&(UDPaddr.dst), &lenDST); //recv "ping" to know addr
+            if(sendto(sock_dst, buffer, n, 0, (struct sockaddr *) &(UDPaddr.dst), lenDST) < 0)
+            break;
+            
+        }
+        /*
+        if (conmutador==47204){
+            
+            n=recvfrom(sock_src, (char *)buffer, MAXLINE, 0, (struct sockaddr *) &(UDPaddr.src), &lenSRC);
+            k=recvfrom(sock_dst, (char *)buffer_2, 128, 0, (struct sockaddr *)&(UDPaddr.dst), &lenDST); //recv "ping" to know addr
+            if(sendto(sock_dst, buffer, n, 0, (struct sockaddr *) &(UDPaddr.dst), lenDST) < 0)
+            break;
+            
+        }
+        */
+        
+        
         //printf("Resend package count: %d\n", count++);
     }
 
@@ -273,19 +344,22 @@ void* UDP_path(void *param){   //Recibe video UDP por PORTNUMBER y reenvia a POR
     close(sock_src);
     close(sock_dst);
 
-    pthread_cleanup_pop(1);
-    pthread_cleanup_pop(1);
+    //pthread_cleanup_pop(1);
+    //pthread_cleanup_pop(1);
     pthread_exit(NULL);    
 }
 
 void* TCP_path(void *param){
+    
     int option_playout;
+    char opcion[16];
     char buf[128];
     int n, i;
     socklen_t len;
     struct sockaddr_in name;
 	int option = TRUE;
     struct Redirect UDPAddrs;
+    pthread_create(&Hilo_UDP, NULL, UDP_path, (void*)&UDPAddrs);
     char informacion[1024];
     char message_ACK[128];
 
@@ -313,9 +387,9 @@ void* TCP_path(void *param){
     
     while(TRUE){
         
-        printf("\nAccepting new PLAYOUT client\n");
+        printf("-_Esperando conexion con cliente Playout...\n");
         new_socket_playout = accept(socket_playout, (struct sockaddr *)&name, &len);
-        printf("New PLAYOUT client accept succesfull\n");
+        printf("-_Cliente Playout aceptado satisfactoriamente\n");
         //FALTA AGREGAR CASO EN QUE LISTA ESTE VACIA
         UDPAddrs.dst=name;
 
@@ -323,17 +397,8 @@ void* TCP_path(void *param){
         START_ENVIO_INFO: /*label to start the cycle of sending stream options*/
         
         
-        //sleep(1);
-        strcpy(informacion, "Escoja entre los siguientes flujos de video:");  
-        /* send info to client*/
-        if ( send(new_socket_playout, (char *)informacion, sizeof(char)*(strlen(informacion)+1),0) < 0) //Manda info titular + \0
-            perror("Send optiond to playout client\n");
-           // indice i de la lista +1 para evitar atoi() problem
-
-        if( read(new_socket_playout, message_ACK, sizeof(message_ACK)) < 0) //recibe ack
-            perror("Read ack from playout client\n");
-
-        printf("\nSending options to client\n");
+        strcpy(informacion, "-_Escoja entre los siguientes flujos de video:\n");
+        printf("%s", informacion); 
 
         pthread_mutex_lock(&lock);
         for (i = 0; i < NUM_CLIENTS; i++)
@@ -342,134 +407,49 @@ void* TCP_path(void *param){
             if (lista_clientes[i].fd != -1) //fd connected
             {   
                 //printf("To send valid client n°%d\n",i);
-                sprintf(informacion,"%d ---> %s",(i+1), lista_clientes[i].name);
-
-                //printf("After sprintf() client n°%d\n",i);
-                if( send(new_socket_playout, (char *)informacion, sizeof(char)*(strlen(informacion)+1),0) < 0) //Manda info con lista de conectados
-                    perror("Send option to playout client\n");
-
-                //printf("After send() client n°%d\n",i);
-                if( read(new_socket_playout, message_ACK, sizeof(message_ACK)) < 0) //recibe ack
-                    perror("Read ack from playout client\n");
-                //printf("After read() client n°%d\n",i);
+                sprintf(informacion,"-_Opcion %d ---> %s, puerto %d",(i+1), lista_clientes[i].name, lista_clientes[i].port);
+                printf("%s\n", informacion);
             }                        
         }
         pthread_mutex_unlock(&lock);
 
-        strcpy(informacion, "END");
-        send(new_socket_playout, (char *)informacion, sizeof(char)*(strlen(informacion)+1),0); //Manda info de que se acabo la lista
+        printf("-_-1 ---> Actualizar lista\n");
         
-        printf("ALL options sended\n");
+        char string[16];
+
+        do
+        {
+            n = read(STDIN_FILENO, string, sizeof(string));
+            string[n-1]='\0';
+            fflush(STDIN_FILENO);
+        } while (atoi(string)==0);
         
-
-
-        //receive int info response from playout option
+        int largo = sizeof(opcion);
+        strncpy(opcion, string, largo-1);
+        opcion[largo-1]='\0';
+        option_playout=atoi(opcion);
+        printf("Opcion escogida:%d\n", option_playout);
         
-        printf("\nWaiting option from playout client:\n");
-        if( (n = recv(new_socket_playout, &buf, sizeof(buf), 0)) > 0){
-
-            option_playout = atoi(buf); //viene revisado por errores
-            printf("Option from playout client: %d\n", option_playout);
-            pthread_mutex_lock(&lock);
-            
-            if ( (option_playout>0) && ((option_playout-1)<NUM_CLIENTS) && (lista_clientes[option_playout-1].fd != -1))  //option info esta desfasado por 1
-            {
-                strcpy(informacion, "OK");
-                if ( send(new_socket_playout, (char *)informacion, sizeof(char)*(strlen(informacion)),0) < 0) //Manda check OK
-                    perror("Send ok to playout client");
-                    
-                memcpy(&UDPAddrs.src, &lista_clientes[option_playout-1].addr, sizeof(lista_clientes[option_playout-1].addr));
-                UDPAddrs.positionWebcam_i = option_playout-1;
-                Start_stream(lista_clientes[option_playout-1].fd); //MANDA START A WEBCAM
-                //Crear camino UDP
-                pthread_create(&Hilo_UDP, NULL, UDP_path, (void*)&UDPAddrs);
-                pthread_mutex_unlock(&lock);
-            }
-            else{
-                strcpy(informacion, "NO");
-                send(new_socket_playout, (char *)informacion, strlen(informacion),0); //Manda info de que socket ya no esta disponible
-                pthread_mutex_unlock(&lock);
-                system("clear -x");
-                goto START_ENVIO_INFO;
-            }
-
-            //block on recieve message from playout clietn
-            
-            printf("\nWaiting command (BYE,STOP) from playout client...\n");
-            if ( (n = recv(new_socket_playout, &buf, sizeof(buf), 0)) > 0 ){
-                buf[n]='\0';
-                printf("Respones from playout client: %s\n", buf);
-
-                if ( strcmp(buf, "BYE") == 0)   //layout client is disconnecting
-                {   
-                    pthread_mutex_lock(&lock);
-                    if (lista_clientes[option_playout-1].fd != -1)  //Manda info de que se acabo la lista
-                    {
-                        Stop_stream(lista_clientes[option_playout-1].fd); //MANDA STOP A WEBCAM
-
-                    }
-                    pthread_mutex_unlock(&lock);
-                    killUDPthread(Hilo_UDP); //Mata hilo
-                    close(new_socket_playout);
-                    continue; //got to accept() again
-
-                }
-                else if ( strcmp(buf, "STOP") == 0)   //layout client is stoping listening video
-                {      
-                    if (send(new_socket_playout, &buf, strlen(buf),0) < 0)   //echo message in case comes from timeout
-                        perror("Echo stop message to playout client");
-
-                    pthread_mutex_lock(&lock);
-                    if (lista_clientes[option_playout-1].fd != -1)
-                    {
-                        Stop_stream(lista_clientes[option_playout-1].fd); //MANDA STOP A WEBCAM
-
-                    }
-                    pthread_mutex_unlock(&lock);
-                    //echo stop
-                    killUDPthread(Hilo_UDP); //Mata hilo
-                    system("clear -x");
-                    goto START_ENVIO_INFO;
-                }
-                else{
-                    printf("Response from playout client doesn't MATCH\n");
-                    continue;  //got to accept() again
-                }
-            }else{
-                perror("Recv() commands from playout client");
-            }
-        }else{
-            perror("Recv() option from playout client");
+        pthread_mutex_lock(&lock);
+        if ((option_playout>0)&&((option_playout-1)<NUM_CLIENTS)&& (lista_clientes[option_playout-1].fd != -1))
+        {
+            conmutador=lista_clientes[option_playout-1].port;
+            pthread_mutex_unlock(&lock);
+            goto START_ENVIO_INFO;
         }
+        else{
+            pthread_mutex_unlock(&lock);
+            goto START_ENVIO_INFO;
+        }
+            
+
+        
     }
 
 
     close(socket_playout);
     pthread_join(Hilo_UDP, NULL);
     pthread_exit(NULL); 
-
-
-    
-    /* PSEUDO CODIGO DE LO DE ARRIBA
-    while(){
-        accept();
-        while(){
-            while(check){
-                sendInfo();
-                receiveInfo();
-                check=checkInfo();
-            }  
-            pthread_create();
-
-            if(receive()=="STOP"){
-                killUDPthread();
-            }else if(receive()=="BYE"){
-                //to accept
-                break;
-            }
-       }
-    }
-    */
 }
 
 
@@ -513,6 +493,8 @@ void exit_handler(int signum)
 
 	if ( (send(new_socket_playout, &message, sizeof(message), MSG_NOSIGNAL)) < 0 )
 		perror("Bye message to playout client");
+
+    //Agregar matar hilos
 
     
 	close(socket_playout);

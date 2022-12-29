@@ -17,6 +17,9 @@
 pid_t stream_pid;
 int sockfd_TCP;
 
+//MUTEX//
+pthread_mutex_t lock;
+
 void killStream(pid_t child_pid);
 pid_t startStream(char *hostname , char* PORTNUMBER, char* device);
 void exit_handler(int signum);
@@ -32,6 +35,7 @@ int main(int argc, char *argv[])
 	int PORTNUMBER;
 	int n;
 	char buffer_server[124], *device;
+	char message_ACK[128];
 
 	//check argc
 	if(argc == 3)//name domain port device	
@@ -44,7 +48,7 @@ int main(int argc, char *argv[])
 		device = argv[3];
 	}else 
 	{
-		printf("Usage: %s <domain> <port> [device= <1>:webcam, <2>:desktop]\n", argv[0]);
+		printf("Usage: %s <domain> <port> [device= <1>:webcam, <2>:desktop] \n", argv[0]);
 		exit(-1);
 	}
 
@@ -55,6 +59,7 @@ int main(int argc, char *argv[])
 	strcpy(hostname, argv[1]);
 	hp = gethostbyname(hostname);
 	PORTNUMBER = atoi(argv[2]);
+	
 	if( hp == NULL){
 		perror("Get host by name");
 		exit(-1);
@@ -87,16 +92,14 @@ int main(int argc, char *argv[])
 	}
 
 	//say your name to server and start sending video
+	pthread_mutex_lock(&lock);
 	char message[50];
 	int nbytes;
 	do{
-		printf("Please insert your name...\n");
+		printf("Porfavor ingresa tu nombre...\n");
 		nbytes=read(0, message, sizeof(message));
 	}while(nbytes<1);
 	message[nbytes-1]='\0';
-
-	if (getlogin_r(message, sizeof(message)) == !0)
-		perror("Get login name");
 
 	if ( (send(sockfd_TCP, &message, strlen(message), MSG_NOSIGNAL)) < 0 )
 	{
@@ -104,11 +107,36 @@ int main(int argc, char *argv[])
 		close(sockfd_TCP);
 		exit(-1);
 	}
-	printf("User name sended: %s\n", message);
+	printf("Nombre enviado: %s\n", message);
 
+	if( read(sockfd_TCP, message_ACK, sizeof(message_ACK)) < 0) //recibe ack
+            perror("Read ack from playout client\n");
 
 	
+
+	do{
+		printf("Porfavor ingresa puerto al que envias video...\n");
+		nbytes=read(0, message, sizeof(message));
+	}while(nbytes<1);
+	message[nbytes-1]='\0';
 	
+
+	if ( (send(sockfd_TCP, &message, strlen(message), MSG_NOSIGNAL)) < 0 )
+	{
+		perror("Port message to server");
+		close(sockfd_TCP);
+		exit(-1);
+	}
+	//printf("Puerto enviado: %s\n", puerto_video);
+
+	pthread_mutex_unlock(&lock);
+	char puerto_video[16];
+	int largo = sizeof(message);
+        strncpy(puerto_video, message, largo-1);
+        puerto_video[largo-1]='\0';
+        //printf("Opcion escogida:%d\n", atoi(puerto_video));
+
+	stream_pid = startStream(hostname, puerto_video, device);
 	printf("Listening to server...\n");
 	while( (n=read(sockfd_TCP, &buffer_server, sizeof(buffer_server))) > 0 )
 	{
@@ -232,7 +260,7 @@ void exit_handler(int signum)
 	{
 		perror("Bye message to server");
 	}
-
+	killStream(stream_pid);
 	close(sockfd_TCP);
 	exit(0);
 }
