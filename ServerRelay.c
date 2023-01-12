@@ -308,7 +308,7 @@ void* UDP_path(void *param){   //Recibe video UDP por PORTNUMBER y reenvia a POR
             
             n=recvfrom(sock_47200, (char *)buffer, MAXLINE, 0, (struct sockaddr *) &(addr_47200), &len_47200);
             buffer[n]='\0'; //for printf
-            k=recvfrom(sock_dst, (char *)buffer_2, 128, 0, (struct sockaddr *)&(UDPaddr.dst), &lenDST); //recv "ping" to know addr
+            k=recvfrom(sock_dst, (char *)buffer_2, 128, 0, (struct sockaddr *)&(UDPaddr.dst), &lenDST); //recv "ping" to know addr            
             if(sendto(sock_dst, buffer, n, 0, (struct sockaddr *) &(UDPaddr.dst), lenDST) < 0)
             break;
             

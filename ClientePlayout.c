@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
   {
 
     do{
-    printf("\nInsert STOP : to stop video and choose another\nInsert BYE : to close the client\n");
+    printf(/*\nInsert STOP : to stop video and choose another*/"\nInsert BYE : to close the client\n");
     poll(pfds, 2, -1);                            /*blocking poll() for serverTCP and stdin*/
     }while(checkPollResult(pfds, 2, UDP_tid) == 1);   /*stop udpThread(STOP) or SIGINT to end(BYE) or wrong message(check again:1)*/
     /*loop again to get new options*/
@@ -269,7 +269,7 @@ void *startUDPredirect(void *redirectSocks)
   printf("UDP redirect START...\n ");
 
   //(n=recvfrom(sockS_UDP, (char *)buffer, MAXLINE, 0, (struct sockaddr *) &cli_addr, &len_3))
-  while( select(FD_SETSIZE, &udpRead, NULL, NULL, &time) > 0){ 
+  while( select(FD_SETSIZE, &udpRead, NULL, NULL, 0) > 0){ 
     if ( (n=recvfrom(sockS_UDP, (char *)buffer, MAXLINE, 0, (struct sockaddr *) &(cli_addr), &len_3)) < 1)
       break;
 
