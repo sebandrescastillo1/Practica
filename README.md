@@ -1,6 +1,6 @@
-# elo330-proyecto-2022-2
+# Proyecto Práctica 2022-2023
 - Sebastian Castillo		201821051-K
-- Nicolas Miranda		    201721013-3
+
 
 
 ## Files
