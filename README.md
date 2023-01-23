@@ -16,7 +16,9 @@
 
 - makefile: Facilita al usuario tareas tales como compilar programas, dar permisos a .sh o eliminar archivos residuales.
 
-## Preparacion
+- Informe_Tecnico.pdf: Informe técnico el cual contiene el experimento en el que se utiliza el código de este repositorio.
+
+## Preparación
 
 Utilizando Makefile para compilar:
 
@@ -39,7 +41,7 @@ Utilizando Makefile para hacer todas las tareas necesarias:
 Utilizando Makefile para limpiar .o
 - Comando -> $make clean
 
-## Ejecucion
+## Ejecución
 
 
 ClientePlayout.c: 
@@ -58,9 +60,10 @@ Server relay siempre recibe en puerto 47203 a las webcams.
 ServerRelay.c: 
 - ./ServerRelay.o
 ```sh
-Ej:$ ./ClienteWebcam.o 
+Ej:$ ./ServerRelay.o 
 ```
 
+Se recomienda encarecidamente revisar Informe_Tecnico.pdf para observar un ejemplo práctico de ejecución.
 
 
 
