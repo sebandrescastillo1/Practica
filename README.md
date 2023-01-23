@@ -1,22 +1,24 @@
-# elo330-proyecto-2022-2
+# Proyecto Práctica 2022-2023
 - Sebastian Castillo		201821051-K
-- Nicolas Miranda		    201721013-3
 
 
-## Files
-- README.md: archivo con explicacion de repositorio.
 
-- ClientePlayout.c: Cliente en red del playout, que recibe video y reenvia para reproducir en TV
+## Archivos
+- README.md: Archivo con explicación de repositorio.
 
-- ClienteWebcam.c: Cliente con webcam, que produce video a reproducir
+- ClienteWebcam.c: Cliente con webcam, que produce y emite video a servidor redireccionador.
 
-- ServerRelay.c: Servidor relay que coordina ambos clientes
+- ServerRelay.c: Servidor relay que selecciona y redirecciona video a Cliente playout.
 
-- webcamStream.sh: Script bash con comando ffmpeg para la transmision
+- ClientePlayout.c: Cliente en red del playout, que recibe video de Servidor Redireccionador y reenvía para reproducir en TV.
+
+- webcamStream.sh: Script bash con comando ffmpeg para la transmision.
 
 - makefile: Facilita al usuario tareas tales como compilar programas, dar permisos a .sh o eliminar archivos residuales.
 
-## Preparacion
+- Informe_Tecnico.pdf: Informe técnico el cual contiene el experimento en el que se utiliza el código de este repositorio.
+
+## Preparación
 
 Utilizando Makefile para compilar:
 
@@ -37,9 +39,9 @@ Utilizando Makefile para hacer todas las tareas necesarias:
 
 
 Utilizando Makefile para limpiar .o
-- comando -> $make clean
+- Comando -> $make clean
 
-## Ejecucion
+## Ejecución
 
 
 ClientePlayout.c: 
@@ -58,9 +60,10 @@ Server relay siempre recibe en puerto 47203 a las webcams.
 ServerRelay.c: 
 - ./ServerRelay.o
 ```sh
-Ej:$ ./ClienteWebcam.o 
+Ej:$ ./ServerRelay.o 
 ```
 
+Se recomienda encarecidamente revisar Informe_Tecnico.pdf para observar un ejemplo práctico de ejecución.
 
 
 

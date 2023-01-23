@@ -46,6 +46,7 @@ struct Redirect{
 
 /*Ordenes por TCP*/
 int Clients_TCP_handler(int sfd);
+int cambio=0;
 int conmutador=47204;
 void Start_stream(int sfd);
 void Stop_stream(int sfd);
@@ -305,22 +306,78 @@ void* UDP_path(void *param){   //Recibe video UDP por PORTNUMBER y reenvia a POR
     while(1){ 
         if (conmutador==47200)
         {   
+            while (1)
+            {   
+                pthread_mutex_lock(&lock);
+                while (cambio)
+                {
+                    n=recvfrom(sock_47200, (char *)buffer, MAXLINE, 0, (struct sockaddr *) &(addr_47200), &len_47200);
+                buffer[n]='\0'; //for printf
+                //printf("Packet size is %d bytes\n", n*sizeof(char));
+                k=recvfrom(sock_dst, (char *)buffer_2, 128, 0, (struct sockaddr *)&(UDPaddr.dst), &lenDST); //recv "ping" to know addr            
+                if ((n*sizeof(char))==1472);
+                    {
+                        if(sendto(sock_dst, buffer, n, 0, (struct sockaddr *) &(UDPaddr.dst), lenDST) < 0) break;
+                        cambio=0;
+                        break;
+
+                    }
+                }
+                pthread_mutex_unlock(&lock);
+                
+                n=recvfrom(sock_47200, (char *)buffer, MAXLINE, 0, (struct sockaddr *) &(addr_47200), &len_47200);
+                buffer[n]='\0'; //for printf
+                //printf("Packet size is %d bytes\n", n*sizeof(char));
+                k=recvfrom(sock_dst, (char *)buffer_2, 128, 0, (struct sockaddr *)&(UDPaddr.dst), &lenDST); //recv "ping" to know addr            
+                if ((n*sizeof(char))==1472);
+                {
+                    if(sendto(sock_dst, buffer, n, 0, (struct sockaddr *) &(UDPaddr.dst), lenDST) < 0) break;
+                    break;
+
+                }
             
-            n=recvfrom(sock_47200, (char *)buffer, MAXLINE, 0, (struct sockaddr *) &(addr_47200), &len_47200);
-            buffer[n]='\0'; //for printf
-            k=recvfrom(sock_dst, (char *)buffer_2, 128, 0, (struct sockaddr *)&(UDPaddr.dst), &lenDST); //recv "ping" to know addr            
-            if(sendto(sock_dst, buffer, n, 0, (struct sockaddr *) &(UDPaddr.dst), lenDST) < 0)
-            break;
+                if(sendto(sock_dst, buffer, n, 0, (struct sockaddr *) &(UDPaddr.dst), lenDST) < 0) break;
+            }
+            
+            
             
         }
         
         if (conmutador==47201){
-           
-            n=recvfrom(sock_47201, (char *)buffer, MAXLINE, 0, (struct sockaddr *) &(addr_47201), &len_47201);
+            while (1)
+            {
+                pthread_mutex_lock(&lock);
+                while (cambio)
+                {
+                    n=recvfrom(sock_47200, (char *)buffer, MAXLINE, 0, (struct sockaddr *) &(addr_47200), &len_47200);
+                buffer[n]='\0'; //for printf
+                //printf("Packet size is %d bytes\n", n*sizeof(char));
+                k=recvfrom(sock_dst, (char *)buffer_2, 128, 0, (struct sockaddr *)&(UDPaddr.dst), &lenDST); //recv "ping" to know addr            
+                if ((n*sizeof(char))==1472);
+                    {
+                        if(sendto(sock_dst, buffer, n, 0, (struct sockaddr *) &(UDPaddr.dst), lenDST) < 0) break;
+                        cambio=0;
+                        break;
+
+                    }
+                }
+                pthread_mutex_unlock(&lock);
+
+                n=recvfrom(sock_47201, (char *)buffer, MAXLINE, 0, (struct sockaddr *) &(addr_47201), &len_47201);
             buffer[n]='\0'; //for printf
             k=recvfrom(sock_dst, (char *)buffer_2, 128, 0, (struct sockaddr *)&(UDPaddr.dst), &lenDST); //recv "ping" to know addr
-            if(sendto(sock_dst, buffer, n, 0, (struct sockaddr *) &(UDPaddr.dst), lenDST) < 0)
-            break;
+            if ((n*sizeof(char))==1472);
+                {
+                    if(sendto(sock_dst, buffer, n, 0, (struct sockaddr *) &(UDPaddr.dst), lenDST) < 0) break;
+                    break;
+
+                }
+            
+                if(sendto(sock_dst, buffer, n, 0, (struct sockaddr *) &(UDPaddr.dst), lenDST) < 0) break;
+            }
+            
+            
+            
             
         }
         /*
@@ -434,6 +491,7 @@ void* TCP_path(void *param){
         if ((option_playout>0)&&((option_playout-1)<NUM_CLIENTS)&& (lista_clientes[option_playout-1].fd != -1))
         {
             conmutador=lista_clientes[option_playout-1].port;
+            cambio=1;
             pthread_mutex_unlock(&lock);
             goto START_ENVIO_INFO;
         }
