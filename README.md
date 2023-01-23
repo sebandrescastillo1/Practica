@@ -3,16 +3,16 @@
 
 
 
-## Files
-- README.md: archivo con explicacion de repositorio.
+## Archivos
+- README.md: Archivo con explicación de repositorio.
 
-- ClientePlayout.c: Cliente en red del playout, que recibe video y reenvia para reproducir en TV
+- ClienteWebcam.c: Cliente con webcam, que produce y emite video a servidor redireccionador.
 
-- ClienteWebcam.c: Cliente con webcam, que produce video a reproducir
+- ServerRelay.c: Servidor relay que selecciona y redirecciona video a Cliente playout.
 
-- ServerRelay.c: Servidor relay que coordina ambos clientes
+- ClientePlayout.c: Cliente en red del playout, que recibe video de Servidor Redireccionador y reenvía para reproducir en TV.
 
-- webcamStream.sh: Script bash con comando ffmpeg para la transmision
+- webcamStream.sh: Script bash con comando ffmpeg para la transmision.
 
 - makefile: Facilita al usuario tareas tales como compilar programas, dar permisos a .sh o eliminar archivos residuales.
 
@@ -37,7 +37,7 @@ Utilizando Makefile para hacer todas las tareas necesarias:
 
 
 Utilizando Makefile para limpiar .o
-- comando -> $make clean
+- Comando -> $make clean
 
 ## Ejecucion
 
